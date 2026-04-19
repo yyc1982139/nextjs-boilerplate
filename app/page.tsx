@@ -9,49 +9,59 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [tip, setTip] = useState('');
 
+  // 第一步：密码校验
   const checkPassword = async () => {
     setLoading(true);
     setTip('');
     try {
       const res = await fetch('/api/auth', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'cors',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ inputPassword })
       });
 
+      if (!res.ok) throw new Error(`接口状态错误: ${res.status}`);
       const data = await res.json();
+      
       if (data.success) {
         setAuthSuccess(true);
         setTip('✅ 密码验证成功');
       } else {
-        setTip('❌ 密码错误');
+        setTip('❌ 密码错误，请重新输入');
       }
     } catch (err) {
-      setTip('⚠️ 网络错误');
+      console.error('密码验证失败详情：', err);
+      setTip(`⚠️ 接口请求异常: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }
   };
 
+  // 第二步：【核心修正】前端改为 POST 请求，完美匹配后端接口
   const getGithubDeviceCode = async () => {
     if (!authSuccess) return;
     setLoading(true);
     try {
       const res = await fetch('/api/github/device', {
+        method: 'POST', // 从GET改为POST！！！
         headers: {
-          'x-access-password': inputPassword
+          'x-access-password': inputPassword,
+          'Content-Type': 'application/json'
         }
       });
 
+      if (!res.ok) throw new Error(`设备码接口错误: ${res.status}`);
       const data = await res.json();
-      if (res.ok) {
-        setDeviceCode(data.device_code);
-        setVerifyUrl(data.verification_uri);
-      } else {
-        setTip('⚠️ 获取设备码失败');
-      }
+      
+      setDeviceCode(data.device_code);
+      setVerifyUrl(data.verification_uri);
+      setTip('✅ 设备码获取成功');
     } catch (err) {
-      setTip('⚠️ 请求失败');
+      console.error('获取设备码失败：', err);
+      setTip(`⚠️ 获取设备码失败: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }
@@ -78,7 +88,7 @@ export default function Home() {
         </button>
       </div>
 
-      {tip && <p className="text-sm">{tip}</p>}
+      {tip && <p className="text-sm text-amber-400">{tip}</p>}
 
       {authSuccess && (
         <div className="w-full max-w-md">
