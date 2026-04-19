@@ -2,50 +2,100 @@
 import { useState } from 'react';
 
 export default function Home() {
-  const [password, setPassword] = useState('');
-  // 你自己设置唯一访问密码，外人无法进入中转功能
-  const MY_PRIVATE_PASSWORD = 'justservo';
-  const [authOk, setAuthOk] = useState(false);
+  const [inputPassword, setInputPassword] = useState('');
+  const [authSuccess, setAuthSuccess] = useState(false);
   const [deviceCode, setDeviceCode] = useState('');
   const [verifyUrl, setVerifyUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [tip, setTip] = useState('');
 
-  // 从你的中转后端获取GitHub设备码
-  const getDeviceCode = async () => {
-    if (password !== MY_PRIVATE_PASSWORD) {
-      alert('密码错误，无权访问');
-      return;
+  const checkPassword = async () => {
+    setLoading(true);
+    setTip('');
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inputPassword })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setAuthSuccess(true);
+        setTip('✅ 密码验证成功');
+      } else {
+        setTip('❌ 密码错误');
+      }
+    } catch (err) {
+      setTip('⚠️ 网络错误');
+    } finally {
+      setLoading(false);
     }
-    const res = await fetch('/api/github/device');
-    const data = await res.json();
-    setDeviceCode(data.device_code);
-    setVerifyUrl(data.verification_uri);
+  };
+
+  const getGithubDeviceCode = async () => {
+    if (!authSuccess) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/github/device', {
+        headers: {
+          'x-access-password': inputPassword
+        }
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setDeviceCode(data.device_code);
+        setVerifyUrl(data.verification_uri);
+      } else {
+        setTip('⚠️ 获取设备码失败');
+      }
+    } catch (err) {
+      setTip('⚠️ 请求失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-8 p-10 bg-black text-white">
-      <h1 className="text-2xl font-bold">JustServo 个人GitHub中转授权</h1>
+      <h1 className="text-2xl font-bold">JustServo GitHub 授权中转</h1>
       
       <div className="w-full max-w-md flex flex-col gap-4">
         <input
           type="password"
-          placeholder="请输入专属访问密码"
-          value={password}
-          onChange={(e)=>setPassword(e.target.value)}
+          placeholder="输入访问密码"
+          value={inputPassword}
+          onChange={(e) => setInputPassword(e.target.value)}
           className="p-3 rounded bg-white/10 border border-white/20"
         />
         <button 
-          onClick={getDeviceCode}
-          className="p-3 rounded bg-blue-600 hover:bg-blue-700"
+          onClick={checkPassword}
+          disabled={loading}
+          className="p-3 rounded bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600"
         >
-          获取VS Code登录设备码
+          {loading ? '验证中...' : '验证密码'}
         </button>
       </div>
 
-      {deviceCode && (
-        <div className="bg-white/10 p-5 rounded w-full max-w-md">
-          <p>请复制设备码：<b className="text-xl">{deviceCode}</b></p>
-          <p>授权地址：{verifyUrl}</p>
-          <p className="text-sm mt-2">打开上方地址，粘贴设备码完成GitHub账号授权</p>
+      {tip && <p className="text-sm">{tip}</p>}
+
+      {authSuccess && (
+        <div className="w-full max-w-md">
+          <button 
+            onClick={getGithubDeviceCode}
+            disabled={loading}
+            className="w-full p-3 rounded bg-green-600 hover:bg-green-700 disabled:bg-gray-600"
+          >
+            {loading ? '获取中...' : '获取 VS Code 设备码'}
+          </button>
+
+          {deviceCode && (
+            <div className="mt-4 p-5 rounded bg-white/10">
+              <p>设备码：<b className="text-xl">{deviceCode}</b></p>
+              <p className="mt-1">授权地址：{verifyUrl}</p>
+            </div>
+          )}
         </div>
       )}
     </main>
