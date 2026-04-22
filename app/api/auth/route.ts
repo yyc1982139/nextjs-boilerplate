@@ -8,16 +8,34 @@ export async function POST(req: NextRequest) {
     if (!realPassword) {
       return NextResponse.json(
         { success: false, message: '服务器未配置密码' },
-        { status: 500 }
+        { 
+          status: 500,
+          headers: { 'Access-Control-Allow-Origin': '*' }
+        }
       );
     }
 
     if (inputPassword === realPassword) {
-      return NextResponse.json({ success: true });
+      return NextResponse.json(
+        { success: true },
+        { headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
     } else {
-      return NextResponse.json({ success: false });
+      return NextResponse.json(
+        { success: false, message: '密码错误' },
+        { 
+          status: 401,
+          headers: { 'Access-Control-Allow-Origin': '*' }
+        }
+      );
     }
   } catch (error) {
-    return NextResponse.json({ success: false }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: '服务器内部错误' },
+      { 
+        status: 500,
+        headers: { 'Access-Control-Allow-Origin': '*' }
+      }
+    );
   }
 }
