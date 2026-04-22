@@ -185,7 +185,7 @@ export default function Home() {
           
           <button 
             onClick={getGithubDeviceCode}
-            disabled={loading || (deviceCode && userCode)}
+            disabled={loading || !!(deviceCode && userCode)}
             className={`w-full p-3 rounded-lg font-medium mb-6 transition-colors ${
               deviceCode && userCode
                 ? 'bg-green-600 cursor-default'
